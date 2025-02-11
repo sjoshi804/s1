@@ -1,0 +1,8 @@
+**/*.json
+**/*.log
+**/*.txt
+**/*.csv
+**/*.jsonl
+**/*.jsonl.gz
+wandb/
+ckpts/
