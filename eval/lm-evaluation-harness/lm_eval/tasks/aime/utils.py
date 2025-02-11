@@ -199,6 +199,77 @@ class ChatCompletionSampler:
                 trial += 1
             # unknown error shall throw exception
 
+class LocalChatCompletionSampler:
+    """
+    Sample from a locally hosted chat completion API
+    """
+
+    def __init__(
+        self,
+        ip_address: str,
+        port: int = 1234,
+        model_name: str = "Qwen/Qwen2.5-7B-Instruct",
+        system_message: str | None = None,
+        temperature: float = 0.5,
+        max_tokens: int = 1024,
+    ):
+        self.base_url = f"http://{ip_address}:{port}"
+        self.model = model_name
+        self.system_message = system_message
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+        self.image_format = "url"
+
+    def _handle_image(
+        self, image: str, encoding: str = "base64", format: str = "png", fovea: int = 768
+    ):
+        raise NotImplementedError("LocalHostedVLLMChatCompletionSampler does not support images")
+
+    def _handle_text(self, text: str):
+        return {"type": "text", "text": text}
+
+    def _pack_message(self, role: str, content):
+        return {"role": str(role), "content": content}
+
+    def __call__(self, message_list) -> str:
+        import requests
+        import json
+
+        if self.system_message:
+            message_list = [self._pack_message("system", self.system_message)] + message_list
+        
+        trial = 0
+        while True:
+            try:
+                payload = {
+                    "model": self.model,
+                    "messages": message_list,
+                    "temperature": self.temperature,
+                    "max_tokens": self.max_tokens,
+                }
+                
+                response = requests.post(
+                    f"{self.base_url}/v1/chat/completions",
+                    json=payload,
+                    headers={"Content-Type": "application/json"}
+                )
+                
+                if response.status_code == 200:
+                    return response.json()["choices"][0]["message"]["content"]
+                else:
+                    raise Exception(f"Request failed with status {response.status_code}: {response.text}")
+                    
+            except requests.exceptions.RequestException as e:
+                exception_backoff = 2**trial  # exponential back off
+                print(
+                    f"Request exception, retrying {trial} after {exception_backoff} sec",
+                    e,
+                )
+                time.sleep(exception_backoff)
+                trial += 1
+                if trial > 5:  # Give up after 5 retries
+                    raise e
+
 def doc_to_text(doc: dict) -> str:
     return QUERY_TEMPLATE.format(Question=doc["problem"])
 
@@ -236,6 +307,8 @@ def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
 
     if os.getenv("PROCESSOR", "") == "gpt-4o-mini":
         sampler = ChatCompletionSampler(model="gpt-4o-mini")
+    elif os.getenv("PROCESSOR", "") == "local":
+        sampler = LocalChatCompletionSampler(ip_address="0.0.0.0", port=8000)
     else:
         print(f"Unknown processor: {os.getenv('PROCESSOR')}; set 'PROCESSOR=gpt-4o-mini' and 'OPENAI_API_KEY=YOUR_KEY' for best results.")
         sampler = None
