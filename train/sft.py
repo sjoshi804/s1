@@ -7,7 +7,7 @@ import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-from datasets import load_dataset, concatenate_datasets, DatasetDict
+from datasets import load_dataset, concatenate_datasets, DatasetDict, load_from_disk
 import transformers
 import trl
 
@@ -17,6 +17,7 @@ class TrainingConfig:
     block_size: int = field(default=32768)
     wandb_project: Optional[str] = field(default="s1-fast-7b")
     train_file_path: Optional[str] = field(default='simplescaling/s1K_tokenized')
+    load_from_disk: bool = field(default=False)
     dagger: bool = field(default=False)
 
     def __post_init__(self):
@@ -40,7 +41,11 @@ def train():
     else:
         model = transformers.AutoModelForCausalLM.from_pretrained(config.model_name)
 
-    dataset = load_dataset(config.train_file_path)
+    dataset = None
+    if config.load_from_disk:
+        dataset = load_from_disk(config.train_file_path)
+    else:
+        dataset = load_dataset(config.train_file_path)
 
     # setting up trainer
     tokenizer = transformers.AutoTokenizer.from_pretrained(config.model_name, use_fast=True)

@@ -18,7 +18,8 @@ train/sft.py \
 --gradient_accumulation_steps=${gradient_accumulation_steps} \
 --num_train_epochs=${epochs} \
 --max_steps=${max_steps} \
---train_file_path="simplescaling/s1K-1.1_tokenized" \
+--train_file_path="/home/sjoshi/s1/s1K-1.1_short" \
+--load_from_disk=True \
 --model_name=${base_model} \
 --warmup_ratio=0.05 \
 --fsdp="full_shard auto_wrap" \
@@ -33,9 +34,8 @@ train/sft.py \
 --weight_decay=1e-4 \
 --adam_beta1=0.9 \
 --adam_beta2=0.95 \
---output_dir="ckpts/s1-1_7b_${uid}" \
---hub_model_id="simplescaling/s1-1_7b-${uid}" \
+--output_dir="ckpts/s1-1_7b_short_${uid}" \
+--hub_model_id="simplescaling/s1-1_7b_short-${uid}" \
 --push_to_hub=${push_to_hub} \
 --gradient_checkpointing=True \
---save_only_model=True \
---block_size=16384
+--save_only_model=True

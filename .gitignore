@@ -6,3 +6,4 @@
 **/*.jsonl.gz
 wandb/
 ckpts/
+s1K-1.1_short/
